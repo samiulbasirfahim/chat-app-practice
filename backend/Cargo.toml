@@ -2,6 +2,7 @@
 name = "backend"
 version = "0.1.0"
 edition = "2024"
+default-run = "backend"
 
 [dependencies]
 actix-web = "4"
@@ -20,3 +21,4 @@ actix-web-validator = "3.0"
 redis = { version = "1.2.1", features = ["tokio-comp"] }
 regex = "1.12.3"
 lazy_static = "1.5.0"
+jsonwebtoken = "10.4.0"

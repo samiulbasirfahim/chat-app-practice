@@ -5,7 +5,8 @@ use crate::utils::error_handler::build_error;
 use crate::utils::random::generate_random_username;
 use actix_web::{HttpResponse, Responder, web};
 use actix_web_validator::Json;
-use redis::Client;
+use redis::aio::MultiplexedConnection;
+use redis::{AsyncCommands, Client};
 use sqlx::PgPool;
 
 pub async fn login_service(body: web::Json<LoginPayload>) -> impl Responder {
@@ -72,8 +73,22 @@ pub async fn resend_otp_service() -> impl Responder {
 }
 
 pub async fn check_username(
-    redis: web::Data<Client>,
     payload: Json<UsernamePayload>,
+    redis: web::Data<MultiplexedConnection>,
 ) -> impl Responder {
-    "Username is available"
+    let username = payload.username.clone().to_lowercase();
+    let username_to_check = format!("username:{username}");
+    let mut conn = redis.get_ref().clone();
+    let exist: bool = match conn.exists(username_to_check).await {
+        Ok(exist) => exist,
+        Err(_) => return HttpResponse::InternalServerError().json(build_error("REDIS Error")),
+    };
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "available": !exist
+    }))
+}
+
+pub async fn set_username() -> impl Responder {
+    "HELLo"
 }

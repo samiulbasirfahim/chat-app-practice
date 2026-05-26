@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use sqlx::types::Uuid;
 use validator::Validate;
 
 lazy_static! {
@@ -23,7 +24,7 @@ pub struct LoginPayload {
     pub password: String,
 }
 
-pub struct LoginResponse {
+pub struct TokenResponse {
     pub refresh: String,
     pub access: String,
 }
@@ -41,5 +42,5 @@ pub struct UsernamePayload {
             message = "Username can only contain letters, numbers, and underscores (_)"
         )
     )]
-    username: String,
+    pub username: String,
 }

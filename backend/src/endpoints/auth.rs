@@ -38,7 +38,11 @@ pub fn register_endpoints(cfg: &mut ServiceConfig) {
             )
             .route(
                 "/check_username",
-                web::get().to(auth_service::check_username),
+                web::post().to(auth_service::check_username),
+            )
+            .route(
+                "/set_username",
+                web::post().to(auth_service::set_username),
             ),
     );
 }

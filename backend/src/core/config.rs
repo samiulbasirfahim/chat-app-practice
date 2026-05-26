@@ -5,6 +5,7 @@ pub struct Config {
     pub port: u16,
     pub db_url: String,
     pub redis_url: String,
+    pub jwt_secret: String,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -22,6 +23,7 @@ pub fn get_config() -> &'static Config {
             .parse()
             .expect("PORT must be a valid number"),
         db_url: Config::env("DATABASE_URL"),
-        redis_url: Config::env("REDIS_URL")
+        redis_url: Config::env("REDIS_URL"),
+        jwt_secret: Config::env("JWT_SECRET"),
     })
 }
