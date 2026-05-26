@@ -2,6 +2,7 @@ use actix_web::http::StatusCode;
 use actix_web::web::JsonConfig;
 use actix_web::{HttpResponse, error};
 use actix_web_validator::{Error as ValidatorError, JsonConfig as ValidateJsonConfig};
+use serde::Serialize;
 use validator::ValidationError;
 
 pub fn generate_error_handlers() -> JsonConfig {
@@ -37,4 +38,17 @@ pub fn generate_validation_handler() -> ValidateJsonConfig {
             error::InternalError::from_response(err, response).into()
         }
     })
+}
+
+#[derive(Serialize)]
+pub struct ErrJson {
+    pub status: String,
+    pub message: String,
+}
+
+pub fn build_error(message: &str) -> ErrJson {
+    ErrJson {
+        status: "error".to_string(),
+        message: message.to_string(),
+    }
 }

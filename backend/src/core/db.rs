@@ -1,5 +1,15 @@
+use redis::Client;
 use sqlx::PgPool;
 
-pub async fn create_db_pool(database_url: &str) -> Result<PgPool, sqlx::Error> {
-    PgPool::connect(database_url).await
+use super::config::get_config;
+
+pub async fn create_db_pool() -> Result<PgPool, sqlx::Error> {
+    let db_uri = get_config().db_url.clone();
+    PgPool::connect(db_uri.as_str()).await
+}
+
+pub async fn build_redis_client() -> Result<Client, redis::RedisError> {
+    let redis_url = get_config().redis_url.clone();
+    let client = Client::open(redis_url)?;
+    Ok(client)
 }

@@ -17,3 +17,6 @@ actix-ws = "0.4.0"
 bcrypt = "0.19.1"
 validator = { version = "0.14", features = ["derive"] }
 actix-web-validator = "3.0"
+redis = { version = "1.2.1", features = ["tokio-comp"] }
+regex = "1.12.3"
+lazy_static = "1.5.0"

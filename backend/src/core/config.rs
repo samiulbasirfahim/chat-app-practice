@@ -3,7 +3,8 @@ use std::sync::OnceLock;
 
 pub struct Config {
     pub port: u16,
-    pub db_uri: String,
+    pub db_url: String,
+    pub redis_url: String,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -20,6 +21,7 @@ pub fn get_config() -> &'static Config {
         port: Config::env("PORT")
             .parse()
             .expect("PORT must be a valid number"),
-        db_uri: Config::env("DATABASE_URI"),
+        db_url: Config::env("DATABASE_URL"),
+        redis_url: Config::env("REDIS_URL")
     })
 }

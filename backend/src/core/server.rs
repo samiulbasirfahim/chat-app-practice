@@ -6,20 +6,20 @@ use crate::endpoints::register_endpoints;
 use crate::utils::error_handler::{generate_error_handlers, generate_validation_handler};
 use actix_web::{App, HttpServer, web};
 
+use super::db::build_redis_client;
+
 pub async fn run_server() -> std::io::Result<()> {
     let port = get_config().port;
-    let db_uri = get_config().db_uri.clone();
-    let db_pool = create_db_pool(&db_uri)
-        .await
-        .expect("Failed to create DB pool");
-    println!("Starting server on port {}", port);
+    let db = web::Data::new(create_db_pool().await.expect("Failed to create DB pool"));
+    let redis = web::Data::new(build_redis_client().await.expect("Failed to open REDIS"));
 
     HttpServer::new(move || {
         let error_handler = generate_error_handlers();
         let validation_handler = generate_validation_handler();
         App::new().service(
             web::scope("/api")
-                .app_data(db_pool.clone())
+                .app_data(db.clone())
+                .app_data(redis.clone())
                 .app_data(validation_handler)
                 .app_data(error_handler)
                 .configure(register_endpoints),

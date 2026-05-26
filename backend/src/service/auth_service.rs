@@ -1,13 +1,18 @@
-use crate::dtos::user::{LoginPayload, NewUser};
+use crate::dtos::user::{LoginPayload, NewUser, UsernamePayload};
+use crate::models::user::User;
 use crate::utils::crypto::hash_password;
+use crate::utils::error_handler::build_error;
+use crate::utils::random::generate_random_username;
 use actix_web::{HttpResponse, Responder, web};
 use actix_web_validator::Json;
+use redis::Client;
+use sqlx::PgPool;
 
 pub async fn login_service(body: web::Json<LoginPayload>) -> impl Responder {
     "Logged in"
 }
 
-pub async fn register_service(payload: Json<NewUser>) -> impl Responder {
+pub async fn register_service(payload: Json<NewUser>, db: web::Data<PgPool>) -> impl Responder {
     let password = payload.password.clone();
     let blocking_result = web::block(move || hash_password(password)).await;
     let password_hash = match blocking_result {
@@ -16,8 +21,18 @@ pub async fn register_service(payload: Json<NewUser>) -> impl Responder {
             return HttpResponse::InternalServerError().body("Internal Server Error");
         }
     };
-    println!("Hash: {}", password_hash);
-    HttpResponse::Ok().body("Registration successful")
+    let username = generate_random_username();
+    let user = User::create(&db, &payload, &password_hash, &username).await;
+    match user {
+        Ok(user) => HttpResponse::Ok().json(user),
+        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
+            HttpResponse::Conflict().json(build_error("Email or username already in use"))
+        }
+        Err(e) => {
+            eprintln!("Failed to create user: {}", e);
+            HttpResponse::InternalServerError().json(build_error("Databse Error"))
+        }
+    }
 }
 
 pub async fn logout_service() -> impl Responder {
@@ -56,6 +71,9 @@ pub async fn resend_otp_service() -> impl Responder {
     "OTP resent"
 }
 
-pub async fn check_username() -> impl Responder {
+pub async fn check_username(
+    redis: web::Data<Client>,
+    payload: Json<UsernamePayload>,
+) -> impl Responder {
     "Username is available"
 }
