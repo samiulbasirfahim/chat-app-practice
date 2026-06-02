@@ -1,6 +1,6 @@
 use crate::dtos::user::{LoginPayload, NewUser, UsernamePayload};
 use crate::models::user::User;
-use crate::utils::crypto::hash_password;
+use crate::utils::crypto::{compare_password, hash_password};
 use crate::utils::error_handler::build_error;
 use crate::utils::random::generate_random_username;
 use actix_web::{HttpResponse, Responder, web};
@@ -9,8 +9,30 @@ use redis::aio::MultiplexedConnection;
 use redis::{AsyncCommands, Client};
 use sqlx::PgPool;
 
-pub async fn login_service(body: web::Json<LoginPayload>) -> impl Responder {
-    "Logged in"
+pub async fn login_service(body: web::Json<LoginPayload>, db: web::Data<PgPool>) -> impl Responder {
+    let user = User::get_by_username_email(&body.username, &db).await;
+    let user = match user {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            return HttpResponse::NotFound()
+                .json(build_error("No user found with given credentials"));
+        }
+        _ => {
+            return HttpResponse::InternalServerError().json(build_error("Database Error"));
+        }
+    };
+
+    let password_match = compare_password(&body.password, &user.password_hash);
+
+    if let Ok(is_logged_in) = password_match {
+        if is_logged_in {
+            return HttpResponse::Ok().json(user);
+        } else {
+            return HttpResponse::Unauthorized().json(build_error("Credentials missmatch"));
+        }
+    } else {
+        return HttpResponse::InternalServerError().json(build_error("Internal Server Error"));
+    }
 }
 
 pub async fn register_service(payload: Json<NewUser>, db: web::Data<PgPool>) -> impl Responder {

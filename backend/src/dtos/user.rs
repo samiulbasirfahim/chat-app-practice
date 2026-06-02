@@ -15,6 +15,7 @@ pub struct NewUser {
     #[validate(length(min = 2, message = "First name must be at least 2 characters long"))]
     pub last_name: String,
     pub email: String,
+    #[validate(length(min = 8, message = "Password must be at least 8 charecters long"))]
     pub password: String,
 }
 
