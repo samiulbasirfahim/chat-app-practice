@@ -1,13 +1,17 @@
-use crate::dtos::user::{LoginPayload, NewUser, UsernamePayload};
+use crate::dtos::user::{
+    LoginPayload, NewUser, UpdateUser, UsernamePayload, ValidateUpdateUserFields,
+};
 use crate::models::user::User;
-use crate::utils::crypto::{compare_password, hash_password};
+use crate::utils::crypto::{AuthUser, compare_password, hash_password, tokens_generator};
 use crate::utils::error_handler::build_error;
 use crate::utils::random::generate_random_username;
+use actix_multipart::form::MultipartForm;
 use actix_web::{HttpResponse, Responder, web};
 use actix_web_validator::Json;
+use redis::AsyncCommands;
 use redis::aio::MultiplexedConnection;
-use redis::{AsyncCommands, Client};
 use sqlx::PgPool;
+use validator::Validate;
 
 pub async fn login_service(body: web::Json<LoginPayload>, db: web::Data<PgPool>) -> impl Responder {
     let user = User::get_by_username_email(&body.username, &db).await;
@@ -23,16 +27,25 @@ pub async fn login_service(body: web::Json<LoginPayload>, db: web::Data<PgPool>)
     };
 
     let password_match = compare_password(&body.password, &user.password_hash);
-
-    if let Ok(is_logged_in) = password_match {
-        if is_logged_in {
-            return HttpResponse::Ok().json(user);
-        } else {
-            return HttpResponse::Unauthorized().json(build_error("Credentials missmatch"));
-        }
-    } else {
+    if let Err(_) = password_match {
         return HttpResponse::InternalServerError().json(build_error("Internal Server Error"));
     }
+
+    let is_logged_in = password_match.unwrap();
+
+    if !is_logged_in {
+        return HttpResponse::Unauthorized().json(build_error("Credentials missmatch"));
+    };
+
+    let tokens = match tokens_generator(user.id) {
+        Ok(tokens) => tokens,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(build_error("Token Generation Failed"));
+        }
+    };
+
+    HttpResponse::Ok().json(serde_json::json!(tokens))
 }
 
 pub async fn register_service(payload: Json<NewUser>, db: web::Data<PgPool>) -> impl Responder {
@@ -70,8 +83,27 @@ pub async fn get_my_user_info_service() -> impl Responder {
     "User info retrieved"
 }
 
-pub async fn update_my_user_info_service() -> impl Responder {
-    "User info updated"
+pub async fn update_my_user_info_service(
+    db: web::Data<PgPool>,
+    user: AuthUser,
+    form: MultipartForm<UpdateUser>,
+) -> impl Responder {
+    let validated_payload = ValidateUpdateUserFields {
+        first_name: form.first_name.as_ref().map(|t| t.0.clone()),
+        last_name: form.last_name.as_ref().map(|t| t.0.clone()),
+    };
+
+    println!("{:?}", user);
+
+    if let Err(validation_err) = validated_payload.validate() {
+        return HttpResponse::BadRequest().json(validation_err);
+    }
+
+    if let Some(avatar) = &form.avatar {
+        // let res = upload_avatar(avatar)
+    }
+
+    HttpResponse::Ok().finish()
 }
 
 pub async fn change_password_service() -> impl Responder {

@@ -1,4 +1,5 @@
 use dotenvy::dotenv;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 pub struct Config {
@@ -6,6 +7,7 @@ pub struct Config {
     pub db_url: String,
     pub redis_url: String,
     pub jwt_secret: String,
+    pub upload_dir: PathBuf,
 }
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
@@ -25,5 +27,6 @@ pub fn get_config() -> &'static Config {
         db_url: Config::env("DATABASE_URL"),
         redis_url: Config::env("REDIS_URL"),
         jwt_secret: Config::env("JWT_SECRET"),
+        upload_dir: PathBuf::from(Config::env("UPLOAD_DIR")),
     })
 }
