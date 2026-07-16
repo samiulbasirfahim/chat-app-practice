@@ -42,6 +42,20 @@ impl User {
         .fetch_one(db)
         .await?)
     }
+
+    pub async fn get_by_id(id: i32, db: &PgPool) -> Result<Option<User>, sqlx::Error> {
+        Ok(sqlx::query_as!(
+            User,
+            r#"
+            SELECT * FROM users
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(db)
+        .await?)
+    }
+
     pub async fn get_by_username_email(
         username_email: &str,
         db: &PgPool,
@@ -56,5 +70,24 @@ impl User {
         )
         .fetch_optional(db)
         .await?)
+    }
+    pub async fn update_username(
+        id: i32,
+        new_username: &str,
+        db: &PgPool,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"
+            UPDATE users
+            SET username = $2
+            WHERE id = $1
+            "#,
+            id,
+            new_username
+        )
+        .execute(db)
+        .await?;
+
+        return Ok(());
     }
 }
